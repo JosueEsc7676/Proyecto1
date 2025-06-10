@@ -1,0 +1,897 @@
+Index: SecurityAppJava/src/main/java/esfe/persistencia/ConnectionManager.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>package esfe.persistencia;\r\n\r\nimport java.sql.Connection; // Representa una conexión a la base de datos.\r\nimport java.sql.DriverManager; // Gestiona los drivers JDBC y establece conexiones.\r\nimport java.sql.SQLException; // Representa errores específicos de la base de datos.\r\n\r\n/**\r\n * Esta clase se encarga de gestionar la conexión a la base de datos SQL Server utilizando JDBC.\r\n * Implementa el patrón Singleton para asegurar que solo exista una única instancia\r\n * de la clase y, por lo tanto, una única conexión a la base de datos compartida.\r\n */\r\npublic class ConnectionManager {\r\n    /**\r\n     * Define la cadena de conexión a la base de datos. Contiene la información\r\n     * necesaria para establecer la comunicación con el servidor de base de datos.\r\n     *\r\n     * - jdbc:sqlserver://... : Indica el tipo de conexión (JDBC para SQL Server).\r\n     * - DESKTOP-9KSCT6V\\\\SQLEXPRESS01:1433 : Dirección del servidor y puerto.\r\n     * - encrypt=true : Indica si la conexión debe ser encriptada.\r\n     * - database=Inventario : Especifica la base de datos a la que se quiere conectar.\r\n     * - trustServerCertificate=true : Indica que se confíe en el certificado del servidor (para entornos de desarrollo).\r\n     * - user=dev : Nombre de usuario para la autenticación.\r\n     * - password=dev : Contraseña para la autenticación.\r\n     */\r\n    private static final String STR_CONNECTION = \"jdbc:sqlserver://JosueEsc\\\\SQLEXPRESS:1433; \" +\r\n            \"encrypt=true; \" +\r\n            \"database=SecurityDB2025; \" +\r\n            \"trustServerCertificate=true;\" +\r\n            \"user=sa;\" +\r\n            \"password=1234\";\r\n\r\n    /**\r\n     * Representa la conexión activa a la base de datos. Inicialmente es nula.\r\n     */\r\n    private Connection connection;\r\n\r\n    /**\r\n     * Única instancia de la clase JDBCConnectionManager (para el patrón Singleton).\r\n     * Se inicializa a null y se crea solo cuando se necesita por primera vez.\r\n     */\r\n    private static ConnectionManager instance;\r\n\r\n    /**\r\n     * Constructor privado para evitar la creación de instancias directamente desde fuera de la clase.\r\n     * Esto es fundamental para el patrón Singleton.\r\n     */\r\n    private ConnectionManager() {\r\n        this.connection = null;\r\n        try {\r\n            // Carga el driver JDBC de Microsoft SQL Server. Esto es necesario para que Java pueda\r\n            // comunicarse con la base de datos SQL Server.\r\n            Class.forName(\"com.microsoft.sqlserver.jdbc.SQLServerDriver\");\r\n        } catch (ClassNotFoundException e) {\r\n            // Si el driver no se encuentra, se lanza una excepción indicando el error.\r\n            throw new RuntimeException(\"Error al cargar el driver JDBC de SQL Server\", e);\r\n        }\r\n    }\r\n\r\n    /**\r\n     * Este método se encarga de establecer la conexión con la base de datos.\r\n     * Es sincronizado (`synchronized`) para asegurar que solo un hilo a la vez pueda\r\n     * intentar establecer la conexión, lo cual es importante en entornos multihilo.\r\n     *\r\n     * @return La instancia de la conexión a la base de datos.\r\n     * @throws SQLException Si ocurre un error al intentar conectar a la base de datos.\r\n     */\r\n    public synchronized Connection connect() throws SQLException {\r\n        // Verifica si la conexión ya existe y si no está cerrada.\r\n        if (this.connection == null || this.connection.isClosed()) {\r\n            try {\r\n                // Intenta establecer la conexión utilizando la cadena de conexión.\r\n                this.connection = DriverManager.getConnection(STR_CONNECTION);\r\n            } catch (SQLException exception) {\r\n                // Si ocurre un error durante la conexión, se lanza una excepción SQLException\r\n                // con un mensaje más descriptivo que incluye el mensaje original de la excepción.\r\n                throw new SQLException(\"Error al conectar a la base de datos: \" + exception.getMessage(), exception);\r\n            }\r\n        }\r\n        // Retorna la conexión (ya sea la existente o la recién creada).\r\n        return this.connection;\r\n    }\r\n\r\n    /**\r\n     * Este método se encarga de cerrar la conexión a la base de datos.\r\n     * También lanza una SQLException si ocurre un error al intentar cerrar la conexión.\r\n     *\r\n     * @throws SQLException Si ocurre un error al intentar cerrar la conexión.\r\n     */\r\n    public void disconnect() throws SQLException {\r\n        // Verifica si la conexión existe (no es nula).\r\n        if (this.connection != null) {\r\n            try {\r\n                // Intenta cerrar la conexión.\r\n                this.connection.close();\r\n            } catch (SQLException exception) {\r\n                // Si ocurre un error al cerrar la conexión, se lanza una excepción SQLException\r\n                // con un mensaje más descriptivo.\r\n                throw new SQLException(\"Error al cerrar la conexión: \" + exception.getMessage(), exception);\r\n            } finally {\r\n                // El bloque finally se ejecuta siempre, independientemente de si hubo una excepción o no.\r\n                // Aquí se asegura que la referencia a la conexión se establezca a null,\r\n                // indicando que ya no hay una conexión activa gestionada por esta instancia.\r\n                this.connection = null;\r\n            }\r\n        }\r\n    }\r\n\r\n    /**\r\n     * Este método estático y sincronizado (`synchronized`) implementa el patrón Singleton.\r\n     * Devuelve la única instancia de JDBCConnectionManager. Si la instancia aún no existe,\r\n     * la crea antes de devolverla. La sincronización asegura que la creación de la instancia\r\n     * sea segura en entornos multihilo (que varios hilos no intenten crear la instancia al mismo tiempo).\r\n     *\r\n     * @return La única instancia de JDBCConnectionManager.\r\n     */\r\n    public static synchronized ConnectionManager getInstance() {\r\n        // Verifica si la instancia ya ha sido creada.\r\n        if (instance == null) {\r\n            // Si no existe, crea una nueva instancia de JDBCConnectionManager.\r\n            instance = new ConnectionManager();\r\n        }\r\n        // Retorna la instancia existente (o la recién creada).\r\n        return instance;\r\n    }\r\n}\r\n
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/SecurityAppJava/src/main/java/esfe/persistencia/ConnectionManager.java b/SecurityAppJava/src/main/java/esfe/persistencia/ConnectionManager.java
+--- a/SecurityAppJava/src/main/java/esfe/persistencia/ConnectionManager.java	(revision 1ab4239fbccd673959472c392cf6c15dd0d85495)
++++ b/SecurityAppJava/src/main/java/esfe/persistencia/ConnectionManager.java	(date 1749516370261)
+@@ -4,122 +4,66 @@
+ import java.sql.DriverManager; // Gestiona los drivers JDBC y establece conexiones.
+ import java.sql.SQLException; // Representa errores específicos de la base de datos.
+ 
+-/**
+- * Esta clase se encarga de gestionar la conexión a la base de datos SQL Server utilizando JDBC.
+- * Implementa el patrón Singleton para asegurar que solo exista una única instancia
+- * de la clase y, por lo tanto, una única conexión a la base de datos compartida.
+- */
++
+ public class ConnectionManager {
+-    /**
+-     * Define la cadena de conexión a la base de datos. Contiene la información
+-     * necesaria para establecer la comunicación con el servidor de base de datos.
+-     *
+-     * - jdbc:sqlserver://... : Indica el tipo de conexión (JDBC para SQL Server).
+-     * - DESKTOP-9KSCT6V\\SQLEXPRESS01:1433 : Dirección del servidor y puerto.
+-     * - encrypt=true : Indica si la conexión debe ser encriptada.
+-     * - database=Inventario : Especifica la base de datos a la que se quiere conectar.
+-     * - trustServerCertificate=true : Indica que se confíe en el certificado del servidor (para entornos de desarrollo).
+-     * - user=dev : Nombre de usuario para la autenticación.
+-     * - password=dev : Contraseña para la autenticación.
+-     */
+-    private static final String STR_CONNECTION = "jdbc:sqlserver://JosueEsc\\SQLEXPRESS:1433; " +
++
++    private static final String STR_CONNECTION = "jdbc:sqlserver://DESKTOP-QLC40F4\\SQLEXPRESS:1433; " +
+             "encrypt=true; " +
+             "database=SecurityDB2025; " +
+             "trustServerCertificate=true;" +
+             "user=sa;" +
+-            "password=1234";
++            "password=12345";
+ 
+-    /**
+-     * Representa la conexión activa a la base de datos. Inicialmente es nula.
+-     */
+     private Connection connection;
+ 
+-    /**
+-     * Única instancia de la clase JDBCConnectionManager (para el patrón Singleton).
+-     * Se inicializa a null y se crea solo cuando se necesita por primera vez.
+-     */
++
+     private static ConnectionManager instance;
+ 
+-    /**
+-     * Constructor privado para evitar la creación de instancias directamente desde fuera de la clase.
+-     * Esto es fundamental para el patrón Singleton.
+-     */
++
+     private ConnectionManager() {
+         this.connection = null;
+         try {
+-            // Carga el driver JDBC de Microsoft SQL Server. Esto es necesario para que Java pueda
+-            // comunicarse con la base de datos SQL Server.
+             Class.forName("com.microsoft.sqlserver.jdbc.SQLServerDriver");
+         } catch (ClassNotFoundException e) {
+-            // Si el driver no se encuentra, se lanza una excepción indicando el error.
+             throw new RuntimeException("Error al cargar el driver JDBC de SQL Server", e);
+         }
+     }
+ 
+-    /**
+-     * Este método se encarga de establecer la conexión con la base de datos.
+-     * Es sincronizado (`synchronized`) para asegurar que solo un hilo a la vez pueda
+-     * intentar establecer la conexión, lo cual es importante en entornos multihilo.
+-     *
+-     * @return La instancia de la conexión a la base de datos.
+-     * @throws SQLException Si ocurre un error al intentar conectar a la base de datos.
+-     */
++
+     public synchronized Connection connect() throws SQLException {
+-        // Verifica si la conexión ya existe y si no está cerrada.
+         if (this.connection == null || this.connection.isClosed()) {
+             try {
+-                // Intenta establecer la conexión utilizando la cadena de conexión.
+                 this.connection = DriverManager.getConnection(STR_CONNECTION);
+             } catch (SQLException exception) {
+-                // Si ocurre un error durante la conexión, se lanza una excepción SQLException
+-                // con un mensaje más descriptivo que incluye el mensaje original de la excepción.
++
+                 throw new SQLException("Error al conectar a la base de datos: " + exception.getMessage(), exception);
+             }
+         }
+-        // Retorna la conexión (ya sea la existente o la recién creada).
+         return this.connection;
+     }
+ 
+-    /**
+-     * Este método se encarga de cerrar la conexión a la base de datos.
+-     * También lanza una SQLException si ocurre un error al intentar cerrar la conexión.
+-     *
+-     * @throws SQLException Si ocurre un error al intentar cerrar la conexión.
+-     */
+     public void disconnect() throws SQLException {
+-        // Verifica si la conexión existe (no es nula).
++
+         if (this.connection != null) {
+             try {
+-                // Intenta cerrar la conexión.
++
+                 this.connection.close();
+             } catch (SQLException exception) {
+-                // Si ocurre un error al cerrar la conexión, se lanza una excepción SQLException
+-                // con un mensaje más descriptivo.
++
+                 throw new SQLException("Error al cerrar la conexión: " + exception.getMessage(), exception);
+             } finally {
+-                // El bloque finally se ejecuta siempre, independientemente de si hubo una excepción o no.
+-                // Aquí se asegura que la referencia a la conexión se establezca a null,
+-                // indicando que ya no hay una conexión activa gestionada por esta instancia.
++
+                 this.connection = null;
+             }
+         }
+     }
+ 
+-    /**
+-     * Este método estático y sincronizado (`synchronized`) implementa el patrón Singleton.
+-     * Devuelve la única instancia de JDBCConnectionManager. Si la instancia aún no existe,
+-     * la crea antes de devolverla. La sincronización asegura que la creación de la instancia
+-     * sea segura en entornos multihilo (que varios hilos no intenten crear la instancia al mismo tiempo).
+-     *
+-     * @return La única instancia de JDBCConnectionManager.
+-     */
+     public static synchronized ConnectionManager getInstance() {
+-        // Verifica si la instancia ya ha sido creada.
++
+         if (instance == null) {
+-            // Si no existe, crea una nueva instancia de JDBCConnectionManager.
++
+             instance = new ConnectionManager();
+         }
+-        // Retorna la instancia existente (o la recién creada).
+         return instance;
+     }
+ }
+Index: SecurityAppJava/src/main/java/esfe/persistencia/UserDAO.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>package esfe.persistencia;\r\n\r\nimport java.sql.PreparedStatement; // Clase para ejecutar consultas SQL preparadas, previniendo inyecciones SQL.\r\nimport java.sql.ResultSet;        // Interfaz para representar el resultado de una consulta SQL.\r\nimport java.sql.SQLException;     // Clase para manejar errores relacionados con la base de datos SQL.\r\nimport java.util.ArrayList;       // Clase para crear listas dinámicas de objetos.\r\n\r\nimport esfe.dominio.User;        // Clase que representa la entidad de usuario en el dominio de la aplicación.\r\nimport esfe.utils.PasswordHasher; // Clase utilitaria para el manejo seguro de contraseñas (hash, verificación).\r\n\r\npublic class UserDAO {\r\n    private ConnectionManager conn; // Objeto para gestionar la conexión con la base de datos.\r\n    private PreparedStatement ps;   // Objeto para ejecutar consultas SQL preparadas.\r\n    private ResultSet rs;           // Objeto para almacenar el resultado de una consulta SQL.\r\n\r\n    public UserDAO(){\r\n        conn = ConnectionManager.getInstance();\r\n    }\r\n\r\n    /**\r\n     * Crea un nuevo usuario en la base de datos.\r\n     *\r\n     * @param user El objeto User que contiene la información del nuevo usuario a crear.\r\n     * Se espera que el objeto User tenga los campos 'name', 'passwordHash',\r\n     * 'email' y 'status' correctamente establecidos. El campo 'id' será\r\n     * generado automáticamente por la base de datos.\r\n     * @return El objeto User recién creado, incluyendo el ID generado por la base de datos,\r\n     * o null si ocurre algún error durante la creación.\r\n     * @throws SQLException Si ocurre un error al interactuar con la base de datos\r\n     * durante la creación del usuario.\r\n     */\r\n    public User create(User user) throws SQLException {\r\n        User res = null; // Variable para almacenar el usuario creado que se retornará.\r\n        try{\r\n            // Preparar la sentencia SQL para la inserción de un nuevo usuario.\r\n            // Se especifica que se retornen las claves generadas automáticamente.\r\n            PreparedStatement ps = conn.connect().prepareStatement(\r\n                    \"INSERT INTO \" +\r\n                            \"Users (name, passwordHash, email, status)\" +\r\n                            \"VALUES (?, ?, ?, ?)\",\r\n                    java.sql.Statement.RETURN_GENERATED_KEYS\r\n            );\r\n            // Establecer los valores de los parámetros en la sentencia preparada.\r\n            ps.setString(1, user.getName()); // Asignar el nombre del usuario.\r\n            ps.setString(2, PasswordHasher.hashPassword(user.getPasswordHash())); // Hashear la contraseña antes de guardarla.\r\n            ps.setString(3, user.getEmail()); // Asignar el correo electrónico del usuario.\r\n            ps.setByte(4, user.getStatus());   // Asignar el estado del usuario.\r\n\r\n            // Ejecutar la sentencia de inserción y obtener el número de filas afectadas.\r\n            int affectedRows = ps.executeUpdate();\r\n\r\n            // Verificar si la inserción fue exitosa (al menos una fila afectada).\r\n            if (affectedRows != 0) {\r\n                // Obtener las claves generadas automáticamente por la base de datos (en este caso, el ID).\r\n                ResultSet  generatedKeys = ps.getGeneratedKeys();\r\n                // Mover el cursor al primer resultado (si existe).\r\n                if (generatedKeys.next()) {\r\n                    // Obtener el ID generado. Generalmente la primera columna contiene la clave primaria.\r\n                    int idGenerado= generatedKeys.getInt(1);\r\n                    // Recuperar el usuario completo utilizando el ID generado.\r\n                    res = getById(idGenerado);\r\n                } else {\r\n                    // Lanzar una excepción si la creación del usuario falló y no se obtuvo un ID.\r\n                    throw new SQLException(\"Creating user failed, no ID obtained.\");\r\n                }\r\n            }\r\n            ps.close(); // Cerrar la sentencia preparada para liberar recursos.\r\n        }catch (SQLException ex){\r\n            // Capturar cualquier excepción SQL que ocurra durante el proceso.\r\n            throw new SQLException(\"Error al crear el usuario: \" + ex.getMessage(), ex);\r\n        } finally {\r\n            // Bloque finally para asegurar que los recursos se liberen.\r\n            ps = null;         // Establecer la sentencia preparada a null.\r\n            conn.disconnect(); // Desconectar de la base de datos.\r\n        }\r\n        return res; // Retornar el usuario creado (con su ID asignado) o null si hubo un error.\r\n    }\r\n\r\n    /**\r\n     * Actualiza la información de un usuario existente en la base de datos.\r\n     *\r\n     * @param user El objeto User que contiene la información actualizada del usuario.\r\n     * Se requiere que el objeto User tenga los campos 'id', 'name', 'email' y 'status'\r\n     * correctamente establecidos para realizar la actualización.\r\n     * @return true si la actualización del usuario fue exitosa (al menos una fila afectada),\r\n     * false en caso contrario.\r\n     * @throws SQLException Si ocurre un error al interactuar con la base de datos\r\n     * durante la actualización del usuario.\r\n     */\r\n    public boolean update(User user) throws SQLException{\r\n        boolean res = false; // Variable para indicar si la actualización fue exitosa.\r\n        try{\r\n            // Preparar la sentencia SQL para actualizar la información de un usuario.\r\n            ps = conn.connect().prepareStatement(\r\n                    \"UPDATE Users \" +\r\n                            \"SET name = ?, email = ?, status = ? \" +\r\n                            \"WHERE id = ?\"\r\n            );\r\n\r\n            // Establecer los valores de los parámetros en la sentencia preparada.\r\n            ps.setString(1, user.getName());  // Asignar el nuevo nombre del usuario.\r\n            ps.setString(2, user.getEmail()); // Asignar el nuevo correo electrónico del usuario.\r\n            ps.setByte(3, user.getStatus());    // Asignar el nuevo estado del usuario.\r\n            ps.setInt(4, user.getId());       // Establecer la condición WHERE para identificar el usuario a actualizar por su ID.\r\n\r\n            // Ejecutar la sentencia de actualización y verificar si se afectó alguna fila.\r\n            if(ps.executeUpdate() > 0){\r\n                res = true; // Si executeUpdate() retorna un valor mayor que 0, significa que la actualización fue exitosa.\r\n            }\r\n            ps.close(); // Cerrar la sentencia preparada para liberar recursos.\r\n        }catch (SQLException ex){\r\n            // Capturar cualquier excepción SQL que ocurra durante el proceso.\r\n            throw new SQLException(\"Error al modificar el usuario: \" + ex.getMessage(), ex);\r\n        } finally {\r\n            // Bloque finally para asegurar que los recursos se liberen.\r\n            ps = null;         // Establecer la sentencia preparada a null.\r\n            conn.disconnect(); // Desconectar de la base de datos.\r\n        }\r\n\r\n        return res; // Retornar el resultado de la operación de actualización.\r\n    }\r\n\r\n    /**\r\n     * Elimina un usuario de la base de datos basándose en su ID.\r\n     *\r\n     * @param user El objeto User que contiene el ID del usuario a eliminar.\r\n     * Se requiere que el objeto User tenga el campo 'id' correctamente establecido.\r\n     * @return true si la eliminación del usuario fue exitosa (al menos una fila afectada),\r\n     * false en caso contrario.\r\n     * @throws SQLException Si ocurre un error al interactuar con la base de datos\r\n     * durante la eliminación del usuario.\r\n     */\r\n    public boolean delete(User user) throws SQLException{\r\n        boolean res = false; // Variable para indicar si la eliminación fue exitosa.\r\n        try{\r\n            // Preparar la sentencia SQL para eliminar un usuario por su ID.\r\n            ps = conn.connect().prepareStatement(\r\n                    \"DELETE FROM Users WHERE id = ?\"\r\n            );\r\n            // Establecer el valor del parámetro en la sentencia preparada (el ID del usuario a eliminar).\r\n            ps.setInt(1, user.getId());\r\n\r\n            // Ejecutar la sentencia de eliminación y verificar si se afectó alguna fila.\r\n            if(ps.executeUpdate() > 0){\r\n                res = true; // Si executeUpdate() retorna un valor mayor que 0, significa que la eliminación fue exitosa.\r\n            }\r\n            ps.close(); // Cerrar la sentencia preparada para liberar recursos.\r\n        }catch (SQLException ex){\r\n            // Capturar cualquier excepción SQL que ocurra durante el proceso.\r\n            throw new SQLException(\"Error al eliminar el usuario: \" + ex.getMessage(), ex);\r\n        } finally {\r\n            // Bloque finally para asegurar que los recursos se liberen.\r\n            ps = null;         // Establecer la sentencia preparada a null.\r\n            conn.disconnect(); // Desconectar de la base de datos.\r\n        }\r\n\r\n        return res; // Retornar el resultado de la operación de eliminación.\r\n    }\r\n\r\n    /**\r\n     * Busca usuarios en la base de datos cuyo nombre contenga la cadena de búsqueda proporcionada.\r\n     * La búsqueda se realiza de forma parcial, es decir, si el nombre del usuario contiene\r\n     * la cadena de búsqueda (ignorando mayúsculas y minúsculas), será incluido en los resultados.\r\n     *\r\n     * @param name La cadena de texto a buscar dentro de los nombres de los usuarios.\r\n     * @return Un ArrayList de objetos User que coinciden con el criterio de búsqueda.\r\n     * Retorna una lista vacía si no se encuentran usuarios con el nombre especificado.\r\n     * @throws SQLException Si ocurre un error al interactuar con la base de datos\r\n     * durante la búsqueda de usuarios.\r\n     */\r\n    public ArrayList<User> search(String name) throws SQLException{\r\n        ArrayList<User> records  = new ArrayList<>(); // Lista para almacenar los usuarios encontrados.\r\n\r\n        try {\r\n            // Preparar la sentencia SQL para buscar usuarios por nombre (usando LIKE para búsqueda parcial).\r\n            ps = conn.connect().prepareStatement(\"SELECT id, name, email, status \" +\r\n                    \"FROM Users \" +\r\n                    \"WHERE name LIKE ?\");\r\n\r\n            // Establecer el valor del parámetro en la sentencia preparada.\r\n            // El '%' al inicio y al final permiten la búsqueda de la cadena 'name' en cualquier parte del nombre del usuario.\r\n            ps.setString(1, \"%\" + name + \"%\");\r\n\r\n            // Ejecutar la consulta SQL y obtener el resultado.\r\n            rs = ps.executeQuery();\r\n\r\n            // Iterar a través de cada fila del resultado.\r\n            while (rs.next()){\r\n                // Crear un nuevo objeto User para cada registro encontrado.\r\n                User user = new User();\r\n                // Asignar los valores de las columnas a los atributos del objeto User.\r\n                user.setId(rs.getInt(1));       // Obtener el ID del usuario.\r\n                user.setName(rs.getString(2));   // Obtener el nombre del usuario.\r\n                user.setEmail(rs.getString(3));  // Obtener el correo electrónico del usuario.\r\n                user.setStatus(rs.getByte(4));    // Obtener el estado del usuario.\r\n                // Agregar el objeto User a la lista de resultados.\r\n                records.add(user);\r\n            }\r\n            ps.close(); // Cerrar la sentencia preparada para liberar recursos.\r\n            rs.close(); // Cerrar el conjunto de resultados para liberar recursos.\r\n        } catch (SQLException ex){\r\n            // Capturar cualquier excepción SQL que ocurra durante el proceso.\r\n            throw new SQLException(\"Error al buscar usuarios: \" + ex.getMessage(), ex);\r\n        } finally {\r\n            // Bloque finally para asegurar que los recursos se liberen.\r\n            ps = null;         // Establecer la sentencia preparada a null.\r\n            rs = null;         // Establecer el conjunto de resultados a null.\r\n            conn.disconnect(); // Desconectar de la base de datos.\r\n        }\r\n        return records; // Retornar la lista de usuarios encontrados.\r\n    }\r\n\r\n    /**\r\n     * Obtiene un usuario de la base de datos basado en su ID.\r\n     *\r\n     * @param id El ID del usuario que se desea obtener.\r\n     * @return Un objeto User si se encuentra un usuario con el ID especificado,\r\n     * null si no se encuentra ningún usuario con ese ID.\r\n     * @throws SQLException Si ocurre un error al interactuar con la base de datos\r\n     * durante la obtención del usuario.\r\n     */\r\n    public User getById(int id) throws SQLException{\r\n        User user  = new User(); // Inicializar un objeto User que se retornará.\r\n\r\n        try {\r\n            // Preparar la sentencia SQL para seleccionar un usuario por su ID.\r\n            ps = conn.connect().prepareStatement(\"SELECT id, name, email, status \" +\r\n                    \"FROM Users \" +\r\n                    \"WHERE id = ?\");\r\n\r\n            // Establecer el valor del parámetro en la sentencia preparada (el ID a buscar).\r\n            ps.setInt(1, id);\r\n\r\n            // Ejecutar la consulta SQL y obtener el resultado.\r\n            rs = ps.executeQuery();\r\n\r\n            // Verificar si se encontró algún registro.\r\n            if (rs.next()) {\r\n                // Si se encontró un usuario, asignar los valores de las columnas al objeto User.\r\n                user.setId(rs.getInt(1));       // Obtener el ID del usuario.\r\n                user.setName(rs.getString(2));   // Obtener el nombre del usuario.\r\n                user.setEmail(rs.getString(3));  // Obtener el correo electrónico del usuario.\r\n                user.setStatus(rs.getByte(4));    // Obtener el estado del usuario.\r\n            } else {\r\n                // Si no se encontró ningún usuario con el ID especificado, establecer el objeto User a null.\r\n                user = null;\r\n            }\r\n            ps.close(); // Cerrar la sentencia preparada para liberar recursos.\r\n            rs.close(); // Cerrar el conjunto de resultados para liberar recursos.\r\n        } catch (SQLException ex){\r\n            // Capturar cualquier excepción SQL que ocurra durante el proceso.\r\n            throw new SQLException(\"Error al obtener un usuario por id: \" + ex.getMessage(), ex);\r\n        } finally {\r\n            // Bloque finally para asegurar que los recursos se liberen.\r\n            ps = null;         // Establecer la sentencia preparada a null.\r\n            rs = null;         // Establecer el conjunto de resultados a null.\r\n            conn.disconnect(); // Desconectar de la base de datos.\r\n        }\r\n        return user; // Retornar el objeto User encontrado o null si no existe.\r\n    }\r\n\r\n    /**\r\n     * Autentica a un usuario en la base de datos verificando su correo electrónico,\r\n     * contraseña (comparando el hash) y estado (activo).\r\n     *\r\n     * @param user El objeto User que contiene el correo electrónico y la contraseña\r\n     * del usuario que se intenta autenticar. Se espera que estos campos estén\r\n     * correctamente establecidos.\r\n     * @return Un objeto User si la autenticación es exitosa (se encuentra un usuario\r\n     * con las credenciales proporcionadas y su estado es activo), o null si la\r\n     * autenticación falla. El objeto User retornado contendrá el ID, nombre,\r\n     * correo electrónico y estado del usuario autenticado.\r\n     * @throws SQLException Si ocurre un error al interactuar con la base de datos\r\n     * durante el proceso de autenticación.\r\n     */\r\n    public User authenticate(User user) throws SQLException{\r\n\r\n        User userAutenticate = new User(); // Inicializar un objeto User para almacenar el usuario autenticado.\r\n\r\n        try {\r\n            // Preparar la sentencia SQL para seleccionar un usuario por su correo electrónico,\r\n            // contraseña hasheada y estado activo (status = 1).\r\n            ps = conn.connect().prepareStatement(\"SELECT id, name, email, status \" +\r\n                    \"FROM Users \" +\r\n                    \"WHERE email = ? AND passwordHash = ? AND status = 1\");\r\n\r\n            // Establecer los valores de los parámetros en la sentencia preparada.\r\n            ps.setString(1, user.getEmail()); // Asignar el correo electrónico del usuario a autenticar.\r\n            ps.setString(2, PasswordHasher.hashPassword(user.getPasswordHash())); // Hashear la contraseña proporcionada para compararla con la almacenada.\r\n            rs = ps.executeQuery(); // Ejecutar la consulta SQL y obtener el resultado.\r\n\r\n            // Verificar si se encontró un registro que coincida con las credenciales y el estado.\r\n            if (rs.next()) {\r\n                // Si se encontró un usuario, asignar los valores de las columnas al objeto userAutenticate.\r\n                userAutenticate.setId(rs.getInt(1));       // Obtener el ID del usuario autenticado.\r\n                userAutenticate.setName(rs.getString(2));   // Obtener el nombre del usuario autenticado.\r\n                userAutenticate.setEmail(rs.getString(3));  // Obtener el correo electrónico del usuario autenticado.\r\n                userAutenticate.setStatus(rs.getByte(4));    // Obtener el estado del usuario autenticado.\r\n            } else {\r\n                // Si no se encontraron coincidencias, la autenticación falla y se establece userAutenticate a null.\r\n                userAutenticate = null;\r\n            }\r\n            ps.close(); // Cerrar la sentencia preparada para liberar recursos.\r\n            rs.close(); // Cerrar el conjunto de resultados para liberar recursos.\r\n        } catch (SQLException ex){\r\n            // Capturar cualquier excepción SQL que ocurra durante el proceso de autenticación.\r\n            throw new SQLException(\"Error al autenticar un usuario por id: \" + ex.getMessage(), ex);\r\n        } finally {\r\n            // Bloque finally para asegurar que los recursos se liberen.\r\n            ps = null;         // Establecer la sentencia preparada a null.\r\n            rs = null;         // Establecer el conjunto de resultados a null.\r\n            conn.disconnect(); // Desconectar de la base de datos.\r\n        }\r\n        return userAutenticate; // Retornar el objeto User autenticado o null si la autenticación falló.\r\n    }\r\n\r\n    /**\r\n     * Actualiza la contraseña de un usuario existente en la base de datos.\r\n     * La nueva contraseña proporcionada se hashea antes de ser almacenada.\r\n     *\r\n     * @param user El objeto User que contiene el ID del usuario cuya contraseña se\r\n     * actualizará y la nueva contraseña (sin hashear) en el campo 'passwordHash'.\r\n     * Se requiere que los campos 'id' y 'passwordHash' del objeto User estén\r\n     * correctamente establecidos.\r\n     * @return true si la actualización de la contraseña fue exitosa (al menos una\r\n     * fila afectada), false en caso contrario.\r\n     * @throws SQLException Si ocurre un error al interactuar con la base de datos\r\n     * durante la actualización de la contraseña.\r\n     */\r\n    public boolean updatePassword(User user) throws SQLException{\r\n        boolean res = false; // Variable para indicar si la actualización de la contraseña fue exitosa.\r\n        try{\r\n            // Preparar la sentencia SQL para actualizar solo la columna 'passwordHash' de un usuario.\r\n            ps = conn.connect().prepareStatement(\r\n                    \"UPDATE Users \" +\r\n                            \"SET passwordHash = ? \" +\r\n                            \"WHERE id = ?\"\r\n            );\r\n            // Hashear la nueva contraseña proporcionada antes de establecerla en la consulta.\r\n            ps.setString(1, PasswordHasher.hashPassword(user.getPasswordHash()));\r\n            // Establecer el ID del usuario cuya contraseña se va a actualizar en la cláusula WHERE.\r\n            ps.setInt(2, user.getId());\r\n\r\n            // Ejecutar la sentencia de actualización y verificar si se afectó alguna fila.\r\n            if(ps.executeUpdate() > 0){\r\n                res = true; // Si executeUpdate() retorna un valor mayor que 0, la actualización fue exitosa.\r\n            }\r\n            ps.close(); // Cerrar la sentencia preparada para liberar recursos.\r\n        }catch (SQLException ex){\r\n            // Capturar cualquier excepción SQL que ocurra durante el proceso.\r\n            throw new SQLException(\"Error al modificar el password del usuario: \" + ex.getMessage(), ex);\r\n        } finally {\r\n            // Bloque finally para asegurar que los recursos se liberen.\r\n            ps = null;         // Establecer la sentencia preparada a null.\r\n            conn.disconnect(); // Desconectar de la base de datos.\r\n        }\r\n\r\n        return res; // Retornar el resultado de la operación de actualización de la contraseña.\r\n    }\r\n}\r\n\r\n
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/SecurityAppJava/src/main/java/esfe/persistencia/UserDAO.java b/SecurityAppJava/src/main/java/esfe/persistencia/UserDAO.java
+--- a/SecurityAppJava/src/main/java/esfe/persistencia/UserDAO.java	(revision 1ab4239fbccd673959472c392cf6c15dd0d85495)
++++ b/SecurityAppJava/src/main/java/esfe/persistencia/UserDAO.java	(date 1749516370403)
+@@ -9,353 +9,247 @@
+ import esfe.utils.PasswordHasher; // Clase utilitaria para el manejo seguro de contraseñas (hash, verificación).
+ 
+ public class UserDAO {
+-    private ConnectionManager conn; // Objeto para gestionar la conexión con la base de datos.
+-    private PreparedStatement ps;   // Objeto para ejecutar consultas SQL preparadas.
+-    private ResultSet rs;           // Objeto para almacenar el resultado de una consulta SQL.
++    private ConnectionManager conn;
++    private PreparedStatement ps;
++    private ResultSet rs;
+ 
+     public UserDAO(){
+         conn = ConnectionManager.getInstance();
+     }
+ 
+-    /**
+-     * Crea un nuevo usuario en la base de datos.
+-     *
+-     * @param user El objeto User que contiene la información del nuevo usuario a crear.
+-     * Se espera que el objeto User tenga los campos 'name', 'passwordHash',
+-     * 'email' y 'status' correctamente establecidos. El campo 'id' será
+-     * generado automáticamente por la base de datos.
+-     * @return El objeto User recién creado, incluyendo el ID generado por la base de datos,
+-     * o null si ocurre algún error durante la creación.
+-     * @throws SQLException Si ocurre un error al interactuar con la base de datos
+-     * durante la creación del usuario.
+-     */
+     public User create(User user) throws SQLException {
+-        User res = null; // Variable para almacenar el usuario creado que se retornará.
++        User res = null;
+         try{
+-            // Preparar la sentencia SQL para la inserción de un nuevo usuario.
+-            // Se especifica que se retornen las claves generadas automáticamente.
++
+             PreparedStatement ps = conn.connect().prepareStatement(
+                     "INSERT INTO " +
+                             "Users (name, passwordHash, email, status)" +
+                             "VALUES (?, ?, ?, ?)",
+                     java.sql.Statement.RETURN_GENERATED_KEYS
+             );
+-            // Establecer los valores de los parámetros en la sentencia preparada.
+-            ps.setString(1, user.getName()); // Asignar el nombre del usuario.
+-            ps.setString(2, PasswordHasher.hashPassword(user.getPasswordHash())); // Hashear la contraseña antes de guardarla.
+-            ps.setString(3, user.getEmail()); // Asignar el correo electrónico del usuario.
+-            ps.setByte(4, user.getStatus());   // Asignar el estado del usuario.
+ 
+-            // Ejecutar la sentencia de inserción y obtener el número de filas afectadas.
++            ps.setString(1, user.getName());
++            ps.setString(2, PasswordHasher.hashPassword(user.getPasswordHash()));
++            ps.setString(3, user.getEmail());
++            ps.setByte(4, user.getStatus());
++
+             int affectedRows = ps.executeUpdate();
+ 
+-            // Verificar si la inserción fue exitosa (al menos una fila afectada).
+             if (affectedRows != 0) {
+-                // Obtener las claves generadas automáticamente por la base de datos (en este caso, el ID).
+                 ResultSet  generatedKeys = ps.getGeneratedKeys();
+-                // Mover el cursor al primer resultado (si existe).
+                 if (generatedKeys.next()) {
+-                    // Obtener el ID generado. Generalmente la primera columna contiene la clave primaria.
+                     int idGenerado= generatedKeys.getInt(1);
+-                    // Recuperar el usuario completo utilizando el ID generado.
+                     res = getById(idGenerado);
+                 } else {
+-                    // Lanzar una excepción si la creación del usuario falló y no se obtuvo un ID.
+                     throw new SQLException("Creating user failed, no ID obtained.");
+                 }
+             }
+-            ps.close(); // Cerrar la sentencia preparada para liberar recursos.
++            ps.close();
+         }catch (SQLException ex){
+-            // Capturar cualquier excepción SQL que ocurra durante el proceso.
++
+             throw new SQLException("Error al crear el usuario: " + ex.getMessage(), ex);
+         } finally {
+-            // Bloque finally para asegurar que los recursos se liberen.
+-            ps = null;         // Establecer la sentencia preparada a null.
+-            conn.disconnect(); // Desconectar de la base de datos.
++
++            ps = null;
++            conn.disconnect();
+         }
+-        return res; // Retornar el usuario creado (con su ID asignado) o null si hubo un error.
++        return res;
+     }
+ 
+-    /**
+-     * Actualiza la información de un usuario existente en la base de datos.
+-     *
+-     * @param user El objeto User que contiene la información actualizada del usuario.
+-     * Se requiere que el objeto User tenga los campos 'id', 'name', 'email' y 'status'
+-     * correctamente establecidos para realizar la actualización.
+-     * @return true si la actualización del usuario fue exitosa (al menos una fila afectada),
+-     * false en caso contrario.
+-     * @throws SQLException Si ocurre un error al interactuar con la base de datos
+-     * durante la actualización del usuario.
+-     */
+     public boolean update(User user) throws SQLException{
+-        boolean res = false; // Variable para indicar si la actualización fue exitosa.
++        boolean res = false;
+         try{
+-            // Preparar la sentencia SQL para actualizar la información de un usuario.
++
+             ps = conn.connect().prepareStatement(
+                     "UPDATE Users " +
+                             "SET name = ?, email = ?, status = ? " +
+                             "WHERE id = ?"
+             );
+ 
+-            // Establecer los valores de los parámetros en la sentencia preparada.
+-            ps.setString(1, user.getName());  // Asignar el nuevo nombre del usuario.
+-            ps.setString(2, user.getEmail()); // Asignar el nuevo correo electrónico del usuario.
+-            ps.setByte(3, user.getStatus());    // Asignar el nuevo estado del usuario.
+-            ps.setInt(4, user.getId());       // Establecer la condición WHERE para identificar el usuario a actualizar por su ID.
++
++            ps.setString(1, user.getName());
++            ps.setString(2, user.getEmail());
++            ps.setByte(3, user.getStatus());
++            ps.setInt(4, user.getId());
+ 
+-            // Ejecutar la sentencia de actualización y verificar si se afectó alguna fila.
++
+             if(ps.executeUpdate() > 0){
+-                res = true; // Si executeUpdate() retorna un valor mayor que 0, significa que la actualización fue exitosa.
++                res = true;
+             }
+-            ps.close(); // Cerrar la sentencia preparada para liberar recursos.
++            ps.close();
+         }catch (SQLException ex){
+-            // Capturar cualquier excepción SQL que ocurra durante el proceso.
++
+             throw new SQLException("Error al modificar el usuario: " + ex.getMessage(), ex);
+         } finally {
+-            // Bloque finally para asegurar que los recursos se liberen.
+-            ps = null;         // Establecer la sentencia preparada a null.
+-            conn.disconnect(); // Desconectar de la base de datos.
++
++            ps = null;
++            conn.disconnect();
+         }
+ 
+-        return res; // Retornar el resultado de la operación de actualización.
++        return res;
+     }
+ 
+-    /**
+-     * Elimina un usuario de la base de datos basándose en su ID.
+-     *
+-     * @param user El objeto User que contiene el ID del usuario a eliminar.
+-     * Se requiere que el objeto User tenga el campo 'id' correctamente establecido.
+-     * @return true si la eliminación del usuario fue exitosa (al menos una fila afectada),
+-     * false en caso contrario.
+-     * @throws SQLException Si ocurre un error al interactuar con la base de datos
+-     * durante la eliminación del usuario.
+-     */
+     public boolean delete(User user) throws SQLException{
+-        boolean res = false; // Variable para indicar si la eliminación fue exitosa.
++        boolean res = false;
+         try{
+-            // Preparar la sentencia SQL para eliminar un usuario por su ID.
++
+             ps = conn.connect().prepareStatement(
+                     "DELETE FROM Users WHERE id = ?"
+             );
+-            // Establecer el valor del parámetro en la sentencia preparada (el ID del usuario a eliminar).
++
+             ps.setInt(1, user.getId());
+ 
+-            // Ejecutar la sentencia de eliminación y verificar si se afectó alguna fila.
++
+             if(ps.executeUpdate() > 0){
+-                res = true; // Si executeUpdate() retorna un valor mayor que 0, significa que la eliminación fue exitosa.
++                res = true;
+             }
+-            ps.close(); // Cerrar la sentencia preparada para liberar recursos.
++            ps.close();
+         }catch (SQLException ex){
+-            // Capturar cualquier excepción SQL que ocurra durante el proceso.
++
+             throw new SQLException("Error al eliminar el usuario: " + ex.getMessage(), ex);
+         } finally {
+-            // Bloque finally para asegurar que los recursos se liberen.
+-            ps = null;         // Establecer la sentencia preparada a null.
+-            conn.disconnect(); // Desconectar de la base de datos.
++
++            ps = null;
++            conn.disconnect();
+         }
+ 
+-        return res; // Retornar el resultado de la operación de eliminación.
++        return res;
+     }
+ 
+-    /**
+-     * Busca usuarios en la base de datos cuyo nombre contenga la cadena de búsqueda proporcionada.
+-     * La búsqueda se realiza de forma parcial, es decir, si el nombre del usuario contiene
+-     * la cadena de búsqueda (ignorando mayúsculas y minúsculas), será incluido en los resultados.
+-     *
+-     * @param name La cadena de texto a buscar dentro de los nombres de los usuarios.
+-     * @return Un ArrayList de objetos User que coinciden con el criterio de búsqueda.
+-     * Retorna una lista vacía si no se encuentran usuarios con el nombre especificado.
+-     * @throws SQLException Si ocurre un error al interactuar con la base de datos
+-     * durante la búsqueda de usuarios.
+-     */
+     public ArrayList<User> search(String name) throws SQLException{
+-        ArrayList<User> records  = new ArrayList<>(); // Lista para almacenar los usuarios encontrados.
++        ArrayList<User> records  = new ArrayList<>();
+ 
+         try {
+-            // Preparar la sentencia SQL para buscar usuarios por nombre (usando LIKE para búsqueda parcial).
+             ps = conn.connect().prepareStatement("SELECT id, name, email, status " +
+                     "FROM Users " +
+                     "WHERE name LIKE ?");
+ 
+-            // Establecer el valor del parámetro en la sentencia preparada.
+-            // El '%' al inicio y al final permiten la búsqueda de la cadena 'name' en cualquier parte del nombre del usuario.
++
+             ps.setString(1, "%" + name + "%");
+ 
+-            // Ejecutar la consulta SQL y obtener el resultado.
++
+             rs = ps.executeQuery();
+ 
+-            // Iterar a través de cada fila del resultado.
++
+             while (rs.next()){
+-                // Crear un nuevo objeto User para cada registro encontrado.
++
+                 User user = new User();
+-                // Asignar los valores de las columnas a los atributos del objeto User.
+-                user.setId(rs.getInt(1));       // Obtener el ID del usuario.
+-                user.setName(rs.getString(2));   // Obtener el nombre del usuario.
+-                user.setEmail(rs.getString(3));  // Obtener el correo electrónico del usuario.
+-                user.setStatus(rs.getByte(4));    // Obtener el estado del usuario.
+-                // Agregar el objeto User a la lista de resultados.
++
++                user.setId(rs.getInt(1));
++                user.setName(rs.getString(2));
++                user.setEmail(rs.getString(3));
++                user.setStatus(rs.getByte(4));
++
+                 records.add(user);
+             }
+-            ps.close(); // Cerrar la sentencia preparada para liberar recursos.
+-            rs.close(); // Cerrar el conjunto de resultados para liberar recursos.
++            ps.close();
++            rs.close();
+         } catch (SQLException ex){
+-            // Capturar cualquier excepción SQL que ocurra durante el proceso.
++
+             throw new SQLException("Error al buscar usuarios: " + ex.getMessage(), ex);
+         } finally {
+-            // Bloque finally para asegurar que los recursos se liberen.
+-            ps = null;         // Establecer la sentencia preparada a null.
+-            rs = null;         // Establecer el conjunto de resultados a null.
+-            conn.disconnect(); // Desconectar de la base de datos.
++
++            ps = null;
++            rs = null;
++            conn.disconnect();
+         }
+-        return records; // Retornar la lista de usuarios encontrados.
++        return records;
+     }
+ 
+-    /**
+-     * Obtiene un usuario de la base de datos basado en su ID.
+-     *
+-     * @param id El ID del usuario que se desea obtener.
+-     * @return Un objeto User si se encuentra un usuario con el ID especificado,
+-     * null si no se encuentra ningún usuario con ese ID.
+-     * @throws SQLException Si ocurre un error al interactuar con la base de datos
+-     * durante la obtención del usuario.
+-     */
++
+     public User getById(int id) throws SQLException{
+-        User user  = new User(); // Inicializar un objeto User que se retornará.
++        User user  = new User();
+ 
+         try {
+-            // Preparar la sentencia SQL para seleccionar un usuario por su ID.
++
+             ps = conn.connect().prepareStatement("SELECT id, name, email, status " +
+                     "FROM Users " +
+                     "WHERE id = ?");
+ 
+-            // Establecer el valor del parámetro en la sentencia preparada (el ID a buscar).
+             ps.setInt(1, id);
+ 
+-            // Ejecutar la consulta SQL y obtener el resultado.
+             rs = ps.executeQuery();
+ 
+-            // Verificar si se encontró algún registro.
+             if (rs.next()) {
+-                // Si se encontró un usuario, asignar los valores de las columnas al objeto User.
+-                user.setId(rs.getInt(1));       // Obtener el ID del usuario.
+-                user.setName(rs.getString(2));   // Obtener el nombre del usuario.
+-                user.setEmail(rs.getString(3));  // Obtener el correo electrónico del usuario.
+-                user.setStatus(rs.getByte(4));    // Obtener el estado del usuario.
++                user.setId(rs.getInt(1));
++                user.setName(rs.getString(2));
++                user.setEmail(rs.getString(3));
++                user.setStatus(rs.getByte(4));
+             } else {
+-                // Si no se encontró ningún usuario con el ID especificado, establecer el objeto User a null.
+                 user = null;
+             }
+-            ps.close(); // Cerrar la sentencia preparada para liberar recursos.
+-            rs.close(); // Cerrar el conjunto de resultados para liberar recursos.
++            ps.close();
++            rs.close();
+         } catch (SQLException ex){
+-            // Capturar cualquier excepción SQL que ocurra durante el proceso.
+             throw new SQLException("Error al obtener un usuario por id: " + ex.getMessage(), ex);
+         } finally {
+-            // Bloque finally para asegurar que los recursos se liberen.
+-            ps = null;         // Establecer la sentencia preparada a null.
+-            rs = null;         // Establecer el conjunto de resultados a null.
+-            conn.disconnect(); // Desconectar de la base de datos.
++            ps = null;
++            rs = null;
++            conn.disconnect();
+         }
+-        return user; // Retornar el objeto User encontrado o null si no existe.
++        return user;
+     }
+ 
+-    /**
+-     * Autentica a un usuario en la base de datos verificando su correo electrónico,
+-     * contraseña (comparando el hash) y estado (activo).
+-     *
+-     * @param user El objeto User que contiene el correo electrónico y la contraseña
+-     * del usuario que se intenta autenticar. Se espera que estos campos estén
+-     * correctamente establecidos.
+-     * @return Un objeto User si la autenticación es exitosa (se encuentra un usuario
+-     * con las credenciales proporcionadas y su estado es activo), o null si la
+-     * autenticación falla. El objeto User retornado contendrá el ID, nombre,
+-     * correo electrónico y estado del usuario autenticado.
+-     * @throws SQLException Si ocurre un error al interactuar con la base de datos
+-     * durante el proceso de autenticación.
+-     */
+     public User authenticate(User user) throws SQLException{
+ 
+-        User userAutenticate = new User(); // Inicializar un objeto User para almacenar el usuario autenticado.
++        User userAutenticate = new User();
+ 
+         try {
+-            // Preparar la sentencia SQL para seleccionar un usuario por su correo electrónico,
+-            // contraseña hasheada y estado activo (status = 1).
++
+             ps = conn.connect().prepareStatement("SELECT id, name, email, status " +
+                     "FROM Users " +
+                     "WHERE email = ? AND passwordHash = ? AND status = 1");
+ 
+-            // Establecer los valores de los parámetros en la sentencia preparada.
+-            ps.setString(1, user.getEmail()); // Asignar el correo electrónico del usuario a autenticar.
+-            ps.setString(2, PasswordHasher.hashPassword(user.getPasswordHash())); // Hashear la contraseña proporcionada para compararla con la almacenada.
+-            rs = ps.executeQuery(); // Ejecutar la consulta SQL y obtener el resultado.
++            ps.setString(1, user.getEmail());
++            ps.setString(2, PasswordHasher.hashPassword(user.getPasswordHash()));
++            rs = ps.executeQuery();
+ 
+-            // Verificar si se encontró un registro que coincida con las credenciales y el estado.
+             if (rs.next()) {
+-                // Si se encontró un usuario, asignar los valores de las columnas al objeto userAutenticate.
+-                userAutenticate.setId(rs.getInt(1));       // Obtener el ID del usuario autenticado.
+-                userAutenticate.setName(rs.getString(2));   // Obtener el nombre del usuario autenticado.
+-                userAutenticate.setEmail(rs.getString(3));  // Obtener el correo electrónico del usuario autenticado.
+-                userAutenticate.setStatus(rs.getByte(4));    // Obtener el estado del usuario autenticado.
++                userAutenticate.setId(rs.getInt(1));
++                userAutenticate.setName(rs.getString(2));
++                userAutenticate.setEmail(rs.getString(3));
++                userAutenticate.setStatus(rs.getByte(4));
+             } else {
+-                // Si no se encontraron coincidencias, la autenticación falla y se establece userAutenticate a null.
+                 userAutenticate = null;
+             }
+-            ps.close(); // Cerrar la sentencia preparada para liberar recursos.
+-            rs.close(); // Cerrar el conjunto de resultados para liberar recursos.
++            ps.close();
++            rs.close();
+         } catch (SQLException ex){
+-            // Capturar cualquier excepción SQL que ocurra durante el proceso de autenticación.
++
+             throw new SQLException("Error al autenticar un usuario por id: " + ex.getMessage(), ex);
+         } finally {
+-            // Bloque finally para asegurar que los recursos se liberen.
+-            ps = null;         // Establecer la sentencia preparada a null.
+-            rs = null;         // Establecer el conjunto de resultados a null.
+-            conn.disconnect(); // Desconectar de la base de datos.
++
++            ps = null;
++            rs = null;
++            conn.disconnect();
+         }
+-        return userAutenticate; // Retornar el objeto User autenticado o null si la autenticación falló.
++        return userAutenticate;
+     }
+ 
+-    /**
+-     * Actualiza la contraseña de un usuario existente en la base de datos.
+-     * La nueva contraseña proporcionada se hashea antes de ser almacenada.
+-     *
+-     * @param user El objeto User que contiene el ID del usuario cuya contraseña se
+-     * actualizará y la nueva contraseña (sin hashear) en el campo 'passwordHash'.
+-     * Se requiere que los campos 'id' y 'passwordHash' del objeto User estén
+-     * correctamente establecidos.
+-     * @return true si la actualización de la contraseña fue exitosa (al menos una
+-     * fila afectada), false en caso contrario.
+-     * @throws SQLException Si ocurre un error al interactuar con la base de datos
+-     * durante la actualización de la contraseña.
+-     */
+     public boolean updatePassword(User user) throws SQLException{
+-        boolean res = false; // Variable para indicar si la actualización de la contraseña fue exitosa.
++        boolean res = false;
+         try{
+-            // Preparar la sentencia SQL para actualizar solo la columna 'passwordHash' de un usuario.
++
+             ps = conn.connect().prepareStatement(
+                     "UPDATE Users " +
+                             "SET passwordHash = ? " +
+                             "WHERE id = ?"
+             );
+-            // Hashear la nueva contraseña proporcionada antes de establecerla en la consulta.
+             ps.setString(1, PasswordHasher.hashPassword(user.getPasswordHash()));
+-            // Establecer el ID del usuario cuya contraseña se va a actualizar en la cláusula WHERE.
+             ps.setInt(2, user.getId());
+ 
+-            // Ejecutar la sentencia de actualización y verificar si se afectó alguna fila.
+             if(ps.executeUpdate() > 0){
+-                res = true; // Si executeUpdate() retorna un valor mayor que 0, la actualización fue exitosa.
++                res = true;
+             }
+-            ps.close(); // Cerrar la sentencia preparada para liberar recursos.
++            ps.close();
+         }catch (SQLException ex){
+-            // Capturar cualquier excepción SQL que ocurra durante el proceso.
+             throw new SQLException("Error al modificar el password del usuario: " + ex.getMessage(), ex);
+         } finally {
+-            // Bloque finally para asegurar que los recursos se liberen.
+-            ps = null;         // Establecer la sentencia preparada a null.
+-            conn.disconnect(); // Desconectar de la base de datos.
++            ps = null;
++            conn.disconnect();
+         }
+ 
+-        return res; // Retornar el resultado de la operación de actualización de la contraseña.
++        return res;
+     }
+ }
+ 
+Index: SecurityAppJava/src/test/java/esfe/persistencia/UserDAOTest.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>package esfe.persistencia;\r\n\r\nimport org.junit.jupiter.api.BeforeEach; // Anotación para indicar que el método se ejecuta antes de cada método de prueba.\r\nimport org.junit.jupiter.api.Test;       // Anotación para indicar que el método es un caso de prueba.\r\nimport esfe.dominio.User;                // Clase que representa la entidad de usuario utilizada en las pruebas.\r\n\r\nimport java.util.ArrayList;              // Clase para crear listas dinámicas de objetos, utilizada en algunas pruebas.\r\nimport java.util.Random;                 // Clase para generar números aleatorios, útil para crear datos de prueba.\r\n\r\nimport java.sql.SQLException;             // Clase para manejar excepciones relacionadas con la base de datos, aunque no se espera que las pruebas unitarias interactúen directamente con ella (idealmente se mockean las dependencias).\r\n\r\nimport static org.junit.jupiter.api.Assertions.*; // Importación estática de métodos de aserción de JUnit 5 para verificar el comportamiento esperado en las pruebas.\r\n\r\n\r\n\r\nclass UserDAOTest {\r\n    private UserDAO userDAO; // Instancia de la clase UserDAO que se va a probar.\r\n\r\n    @BeforeEach\r\n    void setUp(){\r\n        // Método que se ejecuta antes de cada método de prueba (@Test).\r\n        // Su propósito es inicializar el entorno de prueba, en este caso,\r\n        // creando una nueva instancia de UserDAO para cada prueba.\r\n        userDAO = new UserDAO();\r\n    }\r\n    private User create(User user) throws SQLException{\r\n        // Llama al método 'create' del UserDAO para persistir el usuario en la base de datos (simulada).\r\n        User res = userDAO.create(user);\r\n\r\n        // Realiza aserciones para verificar que la creación del usuario fue exitosa\r\n        // y que los datos del usuario retornado coinciden con los datos originales.\r\n        assertNotNull(res, \"El usuario creado no debería ser nulo.\"); // Verifica que el objeto retornado no sea nulo.\r\n        assertEquals(user.getName(), res.getName(), \"El nombre del usuario creado debe ser igual al original.\");\r\n        assertEquals(user.getEmail(), res.getEmail(), \"El email del usuario creado debe ser igual al original.\");\r\n        assertEquals(user.getStatus(), res.getStatus(), \"El status del usuario creado debe ser igual al original.\");\r\n\r\n        // Retorna el objeto User creado (tal como lo devolvió el UserDAO).\r\n        return res;\r\n    }\r\n\r\n    private void update(User user) throws SQLException{\r\n        // Modifica los atributos del objeto User para simular una actualización.\r\n        user.setName(user.getName() + \"_u\"); // Añade \"_u\" al final del nombre.\r\n        user.setEmail(\"u\" + user.getEmail()); // Añade \"u\" al inicio del email.\r\n        user.setStatus((byte)1);             // Establece el status a 1.\r\n\r\n        // Llama al método 'update' del UserDAO para actualizar el usuario en la base de datos (simulada).\r\n        boolean res = userDAO.update(user);\r\n\r\n        // Realiza una aserción para verificar que la actualización fue exitosa.\r\n        assertTrue(res, \"La actualización del usuario debería ser exitosa.\");\r\n\r\n        // Llama al método 'getById' para verificar que los cambios se persistieron correctamente.\r\n        // Aunque el método 'getById' ya tiene sus propias aserciones, esta llamada adicional\r\n        // ayuda a asegurar que la actualización realmente tuvo efecto en la capa de datos.\r\n        getById(user);\r\n    }\r\n\r\n    private void getById(User user) throws SQLException {\r\n        // Llama al método 'getById' del UserDAO para obtener un usuario por su ID.\r\n        User res = userDAO.getById(user.getId());\r\n\r\n        // Realiza aserciones para verificar que el usuario obtenido coincide\r\n        // con el usuario original (o el usuario modificado en pruebas de actualización).\r\n        assertNotNull(res, \"El usuario obtenido por ID no debería ser nulo.\");\r\n        assertEquals(user.getId(), res.getId(), \"El ID del usuario obtenido debe ser igual al original.\");\r\n        assertEquals(user.getName(), res.getName(), \"El nombre del usuario obtenido debe ser igual al esperado.\");\r\n        assertEquals(user.getEmail(), res.getEmail(), \"El email del usuario obtenido debe ser igual al esperado.\");\r\n        assertEquals(user.getStatus(), res.getStatus(), \"El status del usuario obtenido debe ser igual al esperado.\");\r\n    }\r\n\r\n    private void search(User user) throws SQLException {\r\n        // Llama al método 'search' del UserDAO para buscar usuarios por nombre.\r\n        ArrayList<User> users = userDAO.search(user.getName());\r\n        boolean find = false; // Variable para rastrear si se encontró un usuario con el nombre buscado.\r\n\r\n        // Itera sobre la lista de usuarios devuelta por la búsqueda.\r\n        for (User userItem : users) {\r\n            // Verifica si el nombre de cada usuario encontrado contiene la cadena de búsqueda.\r\n            if (userItem.getName().contains(user.getName())) {\r\n                find = true; // Si se encuentra una coincidencia, se establece 'find' a true.\r\n            }\r\n            else{\r\n                find = false; // Si un nombre no contiene la cadena de búsqueda, se establece 'find' a false.\r\n                break;      // Se sale del bucle, ya que se esperaba que todos los resultados contuvieran la cadena.\r\n            }\r\n        }\r\n\r\n        // Realiza una aserción para verificar que todos los usuarios con el nombre buscado fue encontrado.\r\n        assertTrue(find, \"el nombre buscado no fue encontrado : \" + user.getName());\r\n    }\r\n\r\n    private void delete(User user) throws SQLException{\r\n        // Llama al método 'delete' del UserDAO para eliminar un usuario por su ID.\r\n        boolean res = userDAO.delete(user);\r\n\r\n        // Realiza una aserción para verificar que la eliminación fue exitosa.\r\n        assertTrue(res, \"La eliminación del usuario debería ser exitosa.\");\r\n\r\n        // Intenta obtener el usuario por su ID después de la eliminación.\r\n        User res2 = userDAO.getById(user.getId());\r\n\r\n        // Realiza una aserción para verificar que el usuario ya no existe en la base de datos\r\n        // después de la eliminación (el método 'getById' debería retornar null).\r\n        assertNull(res2, \"El usuario debería haber sido eliminado y no encontrado por ID.\");\r\n    }\r\n\r\n    private void autenticate(User user) throws SQLException {\r\n        // Llama al método 'authenticate' del UserDAO para intentar autenticar un usuario.\r\n        User res = userDAO.authenticate(user);\r\n\r\n        // Realiza aserciones para verificar si la autenticación fue exitosa.\r\n        assertNotNull(res, \"La autenticación debería retornar un usuario no nulo si es exitosa.\");\r\n        assertEquals(res.getEmail(), user.getEmail(), \"El email del usuario autenticado debe coincidir con el email proporcionado.\");\r\n        assertEquals(res.getStatus(), 1, \"El status del usuario autenticado debe ser 1 (activo).\");\r\n    }\r\n\r\n    private void autenticacionFails(User user) throws SQLException {\r\n        // Llama al método 'authenticate' del UserDAO para intentar autenticar un usuario\r\n        // con credenciales que se espera que fallen.\r\n        User res = userDAO.authenticate(user);\r\n\r\n        // Realiza una aserción para verificar que la autenticación falló,\r\n        // lo cual se espera que se represente con el método 'authenticate'\r\n        // retornando 'null' cuando las credenciales no son válidas o el usuario no está activo.\r\n        assertNull(res, \"La autenticación debería fallar y retornar null para credenciales inválidas.\");\r\n    }\r\n\r\n    private void updatePassword(User user) throws SQLException{\r\n        // Llama al método 'updatePassword' del UserDAO para actualizar la contraseña del usuario.\r\n        boolean res = userDAO.updatePassword(user);\r\n\r\n        // Realiza una aserción para verificar que la actualización de la contraseña fue exitosa.\r\n        assertTrue(res, \"La actualización de la contraseña debería ser exitosa.\");\r\n\r\n        // Llama al método 'autenticate' para verificar que la nueva contraseña es válida\r\n        // y el usuario aún puede autenticarse con ella. Esto asume que el objeto 'user'\r\n        // contiene la nueva contraseña (sin hashear) antes de llamar a 'updatePassword'.\r\n        // Es importante asegurarse de que la prueba configure correctamente la nueva\r\n        // contraseña en el objeto 'user' antes de esta llamada.\r\n        autenticate(user);\r\n    }\r\n    @Test\r\n    void testUserDAO() throws SQLException {\r\n        // Crea una instancia de la clase Random para generar datos de prueba aleatorios.\r\n        Random random = new Random();\r\n        // Genera un número aleatorio entre 1 y 1000 para asegurar la unicidad del email en cada prueba.\r\n        int num = random.nextInt(1000) + 1;\r\n        // Define una cadena base para el email y le concatena el número aleatorio generado.\r\n        String strEmail = \"test\" + num + \"@example.com\";\r\n        // Crea un nuevo objeto User con datos de prueba. El ID se establece en 0 ya que será generado por la base de datos.\r\n        User user = new User(0, \"Test User\", \"password\", strEmail, (byte) 2);\r\n\r\n        // Llama al método 'create' para persistir el usuario de prueba en la base de datos (simulada) y verifica su creación.\r\n        User testUser = create(user);\r\n\r\n        // Llama al método 'update' para modificar los datos del usuario de prueba y verifica la actualización.\r\n        update(testUser);\r\n\r\n        // Llama al método 'search' para buscar usuarios por el nombre del usuario de prueba y verifica que se encuentre.\r\n        search(testUser);\r\n\r\n        // Restablece la contraseña original del usuario de prueba antes de intentar la autenticación exitosa.\r\n        testUser.setPasswordHash(user.getPasswordHash());\r\n        // Llama al método 'autenticate' para verificar que el usuario puede autenticarse con sus credenciales correctas.\r\n        autenticate(testUser);\r\n\r\n        // Intenta autenticar al usuario con una contraseña incorrecta para verificar el fallo de autenticación.\r\n        testUser.setPasswordHash(\"12345\");\r\n        autenticacionFails(testUser);\r\n\r\n        // Intenta actualizar la contraseña del usuario de prueba con una nueva contraseña.\r\n        testUser.setPasswordHash(\"new_password\"); // Establece la *nueva* contraseña para la actualización.\r\n        updatePassword(testUser); // Llama al método para actualizar la contraseña en la base de datos.\r\n        testUser.setPasswordHash(\"new_password\"); // **Importante:** Actualiza el objeto 'testUser' con la *nueva* contraseña para la siguiente verificación.\r\n        autenticate(testUser); // Verifica que la autenticación sea exitosa con la *nueva* contraseña.\r\n\r\n\r\n        // Llama al método 'delete' para eliminar el usuario de prueba de la base de datos y verifica la eliminación.\r\n        delete(testUser);\r\n    }\r\n    @Test\r\n    void createUser() throws SQLException {\r\n        User user = new User(0, \"admin\", \"12345\", \"admin@gmail.com\", (byte) 1);\r\n        User res = userDAO.create(user);\r\n        assertNotEquals(res,null);\r\n    }\r\n}
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/SecurityAppJava/src/test/java/esfe/persistencia/UserDAOTest.java b/SecurityAppJava/src/test/java/esfe/persistencia/UserDAOTest.java
+--- a/SecurityAppJava/src/test/java/esfe/persistencia/UserDAOTest.java	(revision 1ab4239fbccd673959472c392cf6c15dd0d85495)
++++ b/SecurityAppJava/src/test/java/esfe/persistencia/UserDAOTest.java	(date 1749516370125)
+@@ -14,54 +14,40 @@
+ 
+ 
+ class UserDAOTest {
+-    private UserDAO userDAO; // Instancia de la clase UserDAO que se va a probar.
++    private UserDAO userDAO;
+ 
+     @BeforeEach
+     void setUp(){
+-        // Método que se ejecuta antes de cada método de prueba (@Test).
+-        // Su propósito es inicializar el entorno de prueba, en este caso,
+-        // creando una nueva instancia de UserDAO para cada prueba.
+         userDAO = new UserDAO();
+     }
+     private User create(User user) throws SQLException{
+-        // Llama al método 'create' del UserDAO para persistir el usuario en la base de datos (simulada).
+         User res = userDAO.create(user);
+ 
+-        // Realiza aserciones para verificar que la creación del usuario fue exitosa
+-        // y que los datos del usuario retornado coinciden con los datos originales.
+-        assertNotNull(res, "El usuario creado no debería ser nulo."); // Verifica que el objeto retornado no sea nulo.
++        assertNotNull(res, "El usuario creado no debería ser nulo.");
+         assertEquals(user.getName(), res.getName(), "El nombre del usuario creado debe ser igual al original.");
+         assertEquals(user.getEmail(), res.getEmail(), "El email del usuario creado debe ser igual al original.");
+         assertEquals(user.getStatus(), res.getStatus(), "El status del usuario creado debe ser igual al original.");
+ 
+-        // Retorna el objeto User creado (tal como lo devolvió el UserDAO).
+         return res;
+     }
+ 
+     private void update(User user) throws SQLException{
+-        // Modifica los atributos del objeto User para simular una actualización.
+-        user.setName(user.getName() + "_u"); // Añade "_u" al final del nombre.
+-        user.setEmail("u" + user.getEmail()); // Añade "u" al inicio del email.
+-        user.setStatus((byte)1);             // Establece el status a 1.
++        user.setName(user.getName() + "_u");
++        user.setEmail("u" + user.getEmail());
++        user.setStatus((byte)1);
+ 
+-        // Llama al método 'update' del UserDAO para actualizar el usuario en la base de datos (simulada).
+         boolean res = userDAO.update(user);
+ 
+-        // Realiza una aserción para verificar que la actualización fue exitosa.
+         assertTrue(res, "La actualización del usuario debería ser exitosa.");
+ 
+-        // Llama al método 'getById' para verificar que los cambios se persistieron correctamente.
+-        // Aunque el método 'getById' ya tiene sus propias aserciones, esta llamada adicional
+-        // ayuda a asegurar que la actualización realmente tuvo efecto en la capa de datos.
++
+         getById(user);
+     }
+ 
+     private void getById(User user) throws SQLException {
+-        // Llama al método 'getById' del UserDAO para obtener un usuario por su ID.
+         User res = userDAO.getById(user.getId());
+ 
+-        // Realiza aserciones para verificar que el usuario obtenido coincide
+-        // con el usuario original (o el usuario modificado en pruebas de actualización).
++
+         assertNotNull(res, "El usuario obtenido por ID no debería ser nulo.");
+         assertEquals(user.getId(), res.getId(), "El ID del usuario obtenido debe ser igual al original.");
+         assertEquals(user.getName(), res.getName(), "El nombre del usuario obtenido debe ser igual al esperado.");
+@@ -70,113 +56,82 @@
+     }
+ 
+     private void search(User user) throws SQLException {
+-        // Llama al método 'search' del UserDAO para buscar usuarios por nombre.
++
+         ArrayList<User> users = userDAO.search(user.getName());
+-        boolean find = false; // Variable para rastrear si se encontró un usuario con el nombre buscado.
+-
+-        // Itera sobre la lista de usuarios devuelta por la búsqueda.
++        boolean find = false;
+         for (User userItem : users) {
+-            // Verifica si el nombre de cada usuario encontrado contiene la cadena de búsqueda.
+             if (userItem.getName().contains(user.getName())) {
+-                find = true; // Si se encuentra una coincidencia, se establece 'find' a true.
++                find = true;
+             }
+             else{
+-                find = false; // Si un nombre no contiene la cadena de búsqueda, se establece 'find' a false.
+-                break;      // Se sale del bucle, ya que se esperaba que todos los resultados contuvieran la cadena.
++                find = false;
++                break;
+             }
+         }
+ 
+-        // Realiza una aserción para verificar que todos los usuarios con el nombre buscado fue encontrado.
+         assertTrue(find, "el nombre buscado no fue encontrado : " + user.getName());
+     }
+ 
+     private void delete(User user) throws SQLException{
+-        // Llama al método 'delete' del UserDAO para eliminar un usuario por su ID.
+         boolean res = userDAO.delete(user);
+ 
+-        // Realiza una aserción para verificar que la eliminación fue exitosa.
+         assertTrue(res, "La eliminación del usuario debería ser exitosa.");
+ 
+-        // Intenta obtener el usuario por su ID después de la eliminación.
+         User res2 = userDAO.getById(user.getId());
+ 
+-        // Realiza una aserción para verificar que el usuario ya no existe en la base de datos
+-        // después de la eliminación (el método 'getById' debería retornar null).
++
+         assertNull(res2, "El usuario debería haber sido eliminado y no encontrado por ID.");
+     }
+ 
+     private void autenticate(User user) throws SQLException {
+-        // Llama al método 'authenticate' del UserDAO para intentar autenticar un usuario.
+         User res = userDAO.authenticate(user);
+ 
+-        // Realiza aserciones para verificar si la autenticación fue exitosa.
+         assertNotNull(res, "La autenticación debería retornar un usuario no nulo si es exitosa.");
+         assertEquals(res.getEmail(), user.getEmail(), "El email del usuario autenticado debe coincidir con el email proporcionado.");
+         assertEquals(res.getStatus(), 1, "El status del usuario autenticado debe ser 1 (activo).");
+     }
+ 
+     private void autenticacionFails(User user) throws SQLException {
+-        // Llama al método 'authenticate' del UserDAO para intentar autenticar un usuario
+-        // con credenciales que se espera que fallen.
++
+         User res = userDAO.authenticate(user);
+ 
+-        // Realiza una aserción para verificar que la autenticación falló,
+-        // lo cual se espera que se represente con el método 'authenticate'
+-        // retornando 'null' cuando las credenciales no son válidas o el usuario no está activo.
++
+         assertNull(res, "La autenticación debería fallar y retornar null para credenciales inválidas.");
+     }
+ 
+     private void updatePassword(User user) throws SQLException{
+-        // Llama al método 'updatePassword' del UserDAO para actualizar la contraseña del usuario.
+         boolean res = userDAO.updatePassword(user);
+ 
+-        // Realiza una aserción para verificar que la actualización de la contraseña fue exitosa.
+         assertTrue(res, "La actualización de la contraseña debería ser exitosa.");
+ 
+-        // Llama al método 'autenticate' para verificar que la nueva contraseña es válida
+-        // y el usuario aún puede autenticarse con ella. Esto asume que el objeto 'user'
+-        // contiene la nueva contraseña (sin hashear) antes de llamar a 'updatePassword'.
+-        // Es importante asegurarse de que la prueba configure correctamente la nueva
+-        // contraseña en el objeto 'user' antes de esta llamada.
++
+         autenticate(user);
+     }
+     @Test
+     void testUserDAO() throws SQLException {
+-        // Crea una instancia de la clase Random para generar datos de prueba aleatorios.
+         Random random = new Random();
+-        // Genera un número aleatorio entre 1 y 1000 para asegurar la unicidad del email en cada prueba.
+         int num = random.nextInt(1000) + 1;
+-        // Define una cadena base para el email y le concatena el número aleatorio generado.
+         String strEmail = "test" + num + "@example.com";
+-        // Crea un nuevo objeto User con datos de prueba. El ID se establece en 0 ya que será generado por la base de datos.
+         User user = new User(0, "Test User", "password", strEmail, (byte) 2);
+ 
+-        // Llama al método 'create' para persistir el usuario de prueba en la base de datos (simulada) y verifica su creación.
+         User testUser = create(user);
+ 
+-        // Llama al método 'update' para modificar los datos del usuario de prueba y verifica la actualización.
+         update(testUser);
+ 
+-        // Llama al método 'search' para buscar usuarios por el nombre del usuario de prueba y verifica que se encuentre.
+         search(testUser);
+ 
+-        // Restablece la contraseña original del usuario de prueba antes de intentar la autenticación exitosa.
+         testUser.setPasswordHash(user.getPasswordHash());
+-        // Llama al método 'autenticate' para verificar que el usuario puede autenticarse con sus credenciales correctas.
+         autenticate(testUser);
+ 
+-        // Intenta autenticar al usuario con una contraseña incorrecta para verificar el fallo de autenticación.
+         testUser.setPasswordHash("12345");
+         autenticacionFails(testUser);
+ 
+-        // Intenta actualizar la contraseña del usuario de prueba con una nueva contraseña.
+-        testUser.setPasswordHash("new_password"); // Establece la *nueva* contraseña para la actualización.
+-        updatePassword(testUser); // Llama al método para actualizar la contraseña en la base de datos.
+-        testUser.setPasswordHash("new_password"); // **Importante:** Actualiza el objeto 'testUser' con la *nueva* contraseña para la siguiente verificación.
+-        autenticate(testUser); // Verifica que la autenticación sea exitosa con la *nueva* contraseña.
++        testUser.setPasswordHash("new_password");
++        updatePassword(testUser);
++        testUser.setPasswordHash("new_password");
++        autenticate(testUser);
+ 
+ 
+-        // Llama al método 'delete' para eliminar el usuario de prueba de la base de datos y verifica la eliminación.
+         delete(testUser);
+     }
+     @Test
+Index: SecurityAppJava/src/test/java/esfe/persistencia/ConnectionManagerTest.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>package esfe.persistencia;\r\n\r\nimport org.junit.jupiter.api.AfterEach;\r\nimport org.junit.jupiter.api.BeforeEach;\r\nimport org.junit.jupiter.api.Test;\r\n\r\nimport java.sql.Connection; // Importa la clase Connection del paquete java.sql, que se utiliza para establecer una conexión con la base de datos.\r\nimport java.sql.SQLException; // Importa la clase SQLException del paquete java.sql, que se utiliza para manejar excepciones relacionadas con operaciones de base de datos.\r\n\r\nimport static org.junit.jupiter.api.Assertions.*; // Importa todos los métodos estáticos de la clase Assertions del paquete org.junit.jupiter.api. Esto proporciona métodos para realizar aserciones en las pruebas unitarias, como assertEquals, assertTrue, etc.\r\n\r\nclass ConnectionManagerTest {\r\n    ConnectionManager connectionManager;\r\n    @BeforeEach\r\n    void setUp() throws SQLException {\r\n        // Se ejecuta antes de cada método de prueba.\r\n        // Inicializa el ConnectionManager.\r\n        connectionManager = ConnectionManager.getInstance();\r\n    }\r\n\r\n    @AfterEach\r\n    void tearDown() throws SQLException {\r\n        // Se ejecuta después de cada método de prueba.\r\n        // Cierra la conexión y limpia los recursos.\r\n        if (connectionManager != null) {\r\n            connectionManager.disconnect();\r\n            connectionManager = null; // Para asegurar que no se use accidentalmente\r\n        }\r\n    }\r\n    @Test\r\n    void connect() throws SQLException {\r\n        // Intenta establecer una conexión a la base de datos utilizando el método connect() de ConnectionManager.\r\n        Connection conn = connectionManager.connect();\r\n        // Realiza una aserción para verificar que la conexión establecida no sea nula.\r\n        // Si conn es nulo, la prueba fallará con el mensaje \"La conexion no debe ser nula\".\r\n        assertNotNull(conn, \"La conexion no debe ser nula\");\r\n        // Realiza una aserción para verificar que la conexión establecida esté abierta.\r\n        // El método isClosed() devuelve true si la conexión está cerrada, por lo que assertFalse espera que devuelva false.\r\n        // Si la conexión está cerrada, la prueba fallará con el mensaje \"La conexion debe esta abierta\".\r\n        assertFalse(conn.isClosed(), \"La conexion debe esta abierta\");\r\n        if (conn != null) {\r\n            conn.close(); // Cierra la conexión después de la prueba.\r\n        }\r\n    }\r\n}
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/SecurityAppJava/src/test/java/esfe/persistencia/ConnectionManagerTest.java b/SecurityAppJava/src/test/java/esfe/persistencia/ConnectionManagerTest.java
+--- a/SecurityAppJava/src/test/java/esfe/persistencia/ConnectionManagerTest.java	(revision 1ab4239fbccd673959472c392cf6c15dd0d85495)
++++ b/SecurityAppJava/src/test/java/esfe/persistencia/ConnectionManagerTest.java	(date 1749516370418)
+@@ -13,33 +13,25 @@
+     ConnectionManager connectionManager;
+     @BeforeEach
+     void setUp() throws SQLException {
+-        // Se ejecuta antes de cada método de prueba.
+-        // Inicializa el ConnectionManager.
++
+         connectionManager = ConnectionManager.getInstance();
+     }
+ 
+     @AfterEach
+     void tearDown() throws SQLException {
+-        // Se ejecuta después de cada método de prueba.
+-        // Cierra la conexión y limpia los recursos.
++
+         if (connectionManager != null) {
+             connectionManager.disconnect();
+-            connectionManager = null; // Para asegurar que no se use accidentalmente
++            connectionManager = null;
+         }
+     }
+     @Test
+     void connect() throws SQLException {
+-        // Intenta establecer una conexión a la base de datos utilizando el método connect() de ConnectionManager.
+         Connection conn = connectionManager.connect();
+-        // Realiza una aserción para verificar que la conexión establecida no sea nula.
+-        // Si conn es nulo, la prueba fallará con el mensaje "La conexion no debe ser nula".
+         assertNotNull(conn, "La conexion no debe ser nula");
+-        // Realiza una aserción para verificar que la conexión establecida esté abierta.
+-        // El método isClosed() devuelve true si la conexión está cerrada, por lo que assertFalse espera que devuelva false.
+-        // Si la conexión está cerrada, la prueba fallará con el mensaje "La conexion debe esta abierta".
+         assertFalse(conn.isClosed(), "La conexion debe esta abierta");
+         if (conn != null) {
+-            conn.close(); // Cierra la conexión después de la prueba.
++            conn.close();
+         }
+     }
+ }
+\ No newline at end of file
+Index: SecurityAppJava/src/main/java/esfe/utils/PasswordHasher.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>package esfe.utils;\r\n\r\nimport java.nio.charset.StandardCharsets; // Clase que define juegos de caracteres estándar, como UTF-8, utilizado para codificar la contraseña antes de hashearla.\r\nimport java.security.MessageDigest;      // Clase que proporciona funcionalidades para algoritmos de resumen de mensajes criptográficos, como SHA-256, para hashear contraseñas.\r\nimport java.security.NoSuchAlgorithmException; // Clase para manejar excepciones que ocurren cuando un algoritmo criptográfico solicitado no está disponible en el entorno.\r\nimport java.util.Base64;                 // Clase utilitaria para codificar y decodificar datos en formato Base64, aunque en este contexto (hasheo de contraseñas) no se utiliza directamente para el hash en sí, sino que podría usarse para codificar el hash resultante para su almacenamiento.\r\n\r\npublic class PasswordHasher {\r\n\r\n    /**\r\n     * Hashea una contraseña utilizando el algoritmo SHA-256 y la codifica en Base64.\r\n     *\r\n     * @param password La contraseña en texto plano que se va a hashear.\r\n     * @return Una cadena que representa la contraseña hasheada y codificada en Base64.\r\n     * Retorna null si el algoritmo SHA-256 no está disponible en el entorno.\r\n     */\r\n    public static String hashPassword(String password) {\r\n        try {\r\n            // Obtiene una instancia del algoritmo de resumen de mensajes SHA-256.\r\n            MessageDigest digest = MessageDigest.getInstance(\"SHA-256\");\r\n\r\n            // Convierte la contraseña a bytes utilizando la codificación UTF-8 y calcula su hash.\r\n            byte[] hashBytes = digest.digest(password.getBytes(StandardCharsets.UTF_8));\r\n\r\n            // Codifica el array de bytes del hash resultante a una cadena utilizando la codificación Base64\r\n            // para que sea fácilmente almacenable y transportable.\r\n            return Base64.getEncoder().encodeToString(hashBytes);\r\n\r\n        } catch (NoSuchAlgorithmException ex) {\r\n            // Captura la excepción que ocurre si el algoritmo SHA-256 no está disponible.\r\n            // En este caso, retorna null para indicar que el hasheo falló.\r\n            return null;\r\n        }\r\n    }\r\n}\r\n
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/SecurityAppJava/src/main/java/esfe/utils/PasswordHasher.java b/SecurityAppJava/src/main/java/esfe/utils/PasswordHasher.java
+--- a/SecurityAppJava/src/main/java/esfe/utils/PasswordHasher.java	(revision 1ab4239fbccd673959472c392cf6c15dd0d85495)
++++ b/SecurityAppJava/src/main/java/esfe/utils/PasswordHasher.java	(date 1749516370187)
+@@ -7,28 +7,16 @@
+ 
+ public class PasswordHasher {
+ 
+-    /**
+-     * Hashea una contraseña utilizando el algoritmo SHA-256 y la codifica en Base64.
+-     *
+-     * @param password La contraseña en texto plano que se va a hashear.
+-     * @return Una cadena que representa la contraseña hasheada y codificada en Base64.
+-     * Retorna null si el algoritmo SHA-256 no está disponible en el entorno.
+-     */
+     public static String hashPassword(String password) {
+         try {
+-            // Obtiene una instancia del algoritmo de resumen de mensajes SHA-256.
+             MessageDigest digest = MessageDigest.getInstance("SHA-256");
+ 
+-            // Convierte la contraseña a bytes utilizando la codificación UTF-8 y calcula su hash.
+             byte[] hashBytes = digest.digest(password.getBytes(StandardCharsets.UTF_8));
+ 
+-            // Codifica el array de bytes del hash resultante a una cadena utilizando la codificación Base64
+-            // para que sea fácilmente almacenable y transportable.
+             return Base64.getEncoder().encodeToString(hashBytes);
+ 
+         } catch (NoSuchAlgorithmException ex) {
+-            // Captura la excepción que ocurre si el algoritmo SHA-256 no está disponible.
+-            // En este caso, retorna null para indicar que el hasheo falló.
++
+             return null;
+         }
+     }

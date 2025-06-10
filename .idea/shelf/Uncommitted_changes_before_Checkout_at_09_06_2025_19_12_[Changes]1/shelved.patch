@@ -1,0 +1,79 @@
+Index: SecurityAppJava/src/main/java/esfe/Main.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>package esfe;\r\n\r\nimport esfe.presentacion.LoginForm;\r\nimport esfe.presentacion.MainForm;\r\nimport javax.swing.*;\r\n\r\npublic class Main {\r\n    public static void main(String[] args) {\r\n\r\n        SwingUtilities.invokeLater(() -> {\r\n            // Utiliza el hilo de despacho de eventos (Event Dispatch Thread - EDT) para asegurar\r\n            // que todas las operaciones relacionadas con la interfaz gráfica de usuario (Swing)\r\n            // se realicen de forma segura y sin bloqueos.\r\n            MainForm mainForm  = new MainForm(); // Crea una nueva instancia del formulario principal de la aplicación.\r\n            mainForm.setVisible(true); // Hace visible el formulario principal. Inicialmente podría estar vacío o tener una interfaz de carga.\r\n            LoginForm loginForm = new LoginForm(mainForm); // Crea una nueva instancia del formulario de inicio de sesión, pasándole la instancia del formulario principal como padre. Esto  para centrar la ventana de inicio de sesión relativa a la principal o para pasar datos entre ellas.\r\n            loginForm.setVisible(true); // Hace visible la ventana de inicio de sesión, solicitando al usuario que ingrese sus credenciales.\r\n        });\r\n\r\n    }\r\n\r\n    }\r\n
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/SecurityAppJava/src/main/java/esfe/Main.java b/SecurityAppJava/src/main/java/esfe/Main.java
+--- a/SecurityAppJava/src/main/java/esfe/Main.java	(revision 1ab4239fbccd673959472c392cf6c15dd0d85495)
++++ b/SecurityAppJava/src/main/java/esfe/Main.java	(date 1749517519407)
+@@ -8,13 +8,11 @@
+     public static void main(String[] args) {
+ 
+         SwingUtilities.invokeLater(() -> {
+-            // Utiliza el hilo de despacho de eventos (Event Dispatch Thread - EDT) para asegurar
+-            // que todas las operaciones relacionadas con la interfaz gráfica de usuario (Swing)
+-            // se realicen de forma segura y sin bloqueos.
+-            MainForm mainForm  = new MainForm(); // Crea una nueva instancia del formulario principal de la aplicación.
+-            mainForm.setVisible(true); // Hace visible el formulario principal. Inicialmente podría estar vacío o tener una interfaz de carga.
+-            LoginForm loginForm = new LoginForm(mainForm); // Crea una nueva instancia del formulario de inicio de sesión, pasándole la instancia del formulario principal como padre. Esto  para centrar la ventana de inicio de sesión relativa a la principal o para pasar datos entre ellas.
+-            loginForm.setVisible(true); // Hace visible la ventana de inicio de sesión, solicitando al usuario que ingrese sus credenciales.
++
++            MainForm mainForm  = new MainForm();
++            mainForm.setVisible(true);
++            LoginForm loginForm = new LoginForm(mainForm);
++            loginForm.setVisible(true);
+         });
+ 
+     }
+Index: SecurityAppJava/src/main/java/esfe/utils/CBOption.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>package esfe.utils;\r\n\r\npublic class CBOption {\r\n    private String displayText;\r\n    private Object value;\r\n\r\n    public CBOption(String displayText, Object value) {\r\n        this.displayText = displayText;\r\n        this.value = value;\r\n    }\r\n\r\n    public String getDisplayText() {\r\n        return displayText;\r\n    }\r\n\r\n    public Object getValue() {\r\n        return value;\r\n    }\r\n\r\n    @Override\r\n    public String toString() {\r\n        return displayText; // Esto es lo que se mostrará en el JComboBox\r\n    }\r\n    @Override\r\n    public boolean equals(Object obj) {\r\n        // Verifica si el objeto con el que se está comparando es nulo.\r\n        // Si es nulo, no puede ser igual a esta instancia, por lo tanto, retorna falso.\r\n        if (obj == null) {\r\n            return false;\r\n        }\r\n        // Verifica si el objeto con el que se está comparando pertenece a una clase diferente.\r\n        // Si las clases no son las mismas, los objetos no pueden ser iguales, por lo tanto, retorna falso.\r\n        if (getClass() != obj.getClass()) {\r\n            return false;\r\n        }\r\n        // Realiza un casting del objeto genérico 'obj' a la clase específica 'CBOption'\r\n        // para poder acceder a sus atributos y métodos.\r\n        final CBOption other = (CBOption) obj;\r\n        // Compara el valor del atributo 'value' de esta instancia con el valor del atributo 'value'\r\n        // del objeto 'other'. Si los valores no son iguales, los objetos no son iguales,\r\n        // por lo tanto, retorna falso.\r\n        if (this.getValue() != other.getValue()) {\r\n            return false;\r\n        }\r\n        // Si todas las verificaciones anteriores pasan (el objeto no es nulo, pertenece a la misma\r\n        // clase y el valor del atributo 'value' es el mismo), entonces los objetos se consideran iguales\r\n        // y se retorna verdadero. En este caso, la igualdad se basa únicamente en el valor del\r\n        // atributo 'value'. Si la clase 'CBOption' tiene más atributos relevantes para la igualdad,\r\n        // también deberían compararse aquí.\r\n        return true;\r\n    }\r\n}\r\n
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/SecurityAppJava/src/main/java/esfe/utils/CBOption.java b/SecurityAppJava/src/main/java/esfe/utils/CBOption.java
+--- a/SecurityAppJava/src/main/java/esfe/utils/CBOption.java	(revision 1ab4239fbccd673959472c392cf6c15dd0d85495)
++++ b/SecurityAppJava/src/main/java/esfe/utils/CBOption.java	(date 1749516370247)
+@@ -19,34 +19,24 @@
+ 
+     @Override
+     public String toString() {
+-        return displayText; // Esto es lo que se mostrará en el JComboBox
++        return displayText;
+     }
+     @Override
+     public boolean equals(Object obj) {
+-        // Verifica si el objeto con el que se está comparando es nulo.
+-        // Si es nulo, no puede ser igual a esta instancia, por lo tanto, retorna falso.
++
+         if (obj == null) {
+             return false;
+         }
+-        // Verifica si el objeto con el que se está comparando pertenece a una clase diferente.
+-        // Si las clases no son las mismas, los objetos no pueden ser iguales, por lo tanto, retorna falso.
++
+         if (getClass() != obj.getClass()) {
+             return false;
+         }
+-        // Realiza un casting del objeto genérico 'obj' a la clase específica 'CBOption'
+-        // para poder acceder a sus atributos y métodos.
++
+         final CBOption other = (CBOption) obj;
+-        // Compara el valor del atributo 'value' de esta instancia con el valor del atributo 'value'
+-        // del objeto 'other'. Si los valores no son iguales, los objetos no son iguales,
+-        // por lo tanto, retorna falso.
++
+         if (this.getValue() != other.getValue()) {
+             return false;
+         }
+-        // Si todas las verificaciones anteriores pasan (el objeto no es nulo, pertenece a la misma
+-        // clase y el valor del atributo 'value' es el mismo), entonces los objetos se consideran iguales
+-        // y se retorna verdadero. En este caso, la igualdad se basa únicamente en el valor del
+-        // atributo 'value'. Si la clase 'CBOption' tiene más atributos relevantes para la igualdad,
+-        // también deberían compararse aquí.
+         return true;
+     }
+ }
